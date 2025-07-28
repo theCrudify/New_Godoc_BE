@@ -1,0 +1,1341 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../prisma/generated/db2"
+    binaryTargets = ["native", "windows"]
+
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_2")
+}
+
+model tr_log {
+  id         String   @id @default(uuid())
+  timestamp  DateTime @default(now())
+  userId     String?
+  endpoint   String
+  method     String
+  statusCode Int
+  ipAddress  String?
+  userAgent  String?
+  action     String?
+  metadata   Json?
+}
+
+model mst_role {
+  id             Int                 @id @default(autoincrement())
+  role_name      String              @unique @db.VarChar(255)
+  description    String?             @db.Text
+  created_at     DateTime            @default(now()) @db.Timestamp(0)
+  updated_at     DateTime?           @db.Timestamp(0)
+  created_by     Int?
+  updated_by     Int?
+  authorizations mst_authorization[]
+}
+
+model mst_line {
+  id                     Int                     @id @default(autoincrement())
+  line                   String?                 @db.VarChar(255)
+  id_section_manufacture Int?
+  code_line              String?                 @db.VarChar(255)
+  status                 Boolean                 @default(true)
+  is_deleted             Boolean                 @default(false)
+  created_by             String?
+  created_at             DateTime                @default(now()) @db.Timestamp(0)
+  updated_by             String?
+  updated_at             DateTime?               @db.Timestamp(0)
+  areas                  mst_area[]
+  section_manufacture    mst_section_department? @relation(fields: [id_section_manufacture], references: [id])
+
+  @@index([id_section_manufacture], map: "mst_line_id_section_manufacture_fkey")
+}
+
+model mst_department_head {
+  id               Int                     @id @default(autoincrement())
+  authorization_id Int?
+  section_id       Int?
+  created_by       String?                 @db.VarChar(255)
+  is_deleted       Boolean?                @default(false)
+  authorization    mst_authorization?      @relation(fields: [authorization_id], references: [id])
+  section          mst_section_department? @relation(fields: [section_id], references: [id])
+
+  @@index([authorization_id], map: "authorization_id_idx")
+  @@index([section_id], map: "section_id_idx")
+}
+
+model mst_section_head {
+  id               Int                     @id @default(autoincrement())
+  authorization_id Int?
+  section_id       Int?
+  created_by       String?                 @db.VarChar(255)
+  is_deleted       Boolean?                @default(false)
+  authorization    mst_authorization?      @relation(fields: [authorization_id], references: [id])
+  section          mst_section_department? @relation(fields: [section_id], references: [id])
+
+  @@index([section_id], map: "section_id_idx")
+  @@index([authorization_id], map: "authorization_id_idx")
+}
+
+model mst_sub_document {
+  id   Int     @id @default(autoincrement())
+  desc String? @db.VarChar(255)
+  code String? @db.VarChar(255)
+}
+
+model mst_development {
+  id               Int       @id @default(autoincrement())
+  development_desc String?   @db.VarChar(255)
+  development_code String?   @db.VarChar(255)
+  is_deleted       Boolean   @default(false)
+  status           Boolean   @default(true)
+  updated_by       String?   @db.VarChar(255)
+  updated_at       DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model mst_doc_type {
+  id            Int       @id @default(autoincrement())
+  document_type String?   @db.VarChar(255)
+  document_code String?   @db.VarChar(255)
+  is_deleted    Boolean   @default(false)
+  status        Boolean   @default(true)
+  updated_by    String?   @db.VarChar(255)
+  updated_at    DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model mst_area {
+  id              Int                  @id @default(autoincrement())
+  id_line         Int?
+  area            String?              @db.VarChar(255)
+  code_area       String?              @db.VarChar(255)
+  status          Boolean              @default(true)
+  created_by      String?
+  created_at      DateTime             @default(now()) @db.Timestamp(0)
+  updated_by      String?
+  updated_at      DateTime             @updatedAt @db.Timestamp(0)
+  is_deleted      Boolean              @default(false)
+  line            mst_line?            @relation(fields: [id_line], references: [id])
+  documentNumbers tr_document_number[]
+
+  @@index([id_line])
+}
+
+model mst_plant {
+  id                 Int                    @id @default(autoincrement())
+  plant_name         String?                @db.VarChar(255)
+  plant_code         String?                @db.VarChar(255)
+  address            String?                @db.Text
+  created_at         DateTime?              @default(now()) @db.Timestamp(0)
+  created_by         String?
+  updated_at         DateTime?              @db.Timestamp(0)
+  updated_by         String?
+  authorizations     mst_authorization[]
+  departments        mst_department[]
+  plantsite          tr_additional_doc[]
+  authorizationPlant tr_authorization_doc[]
+  documents          tr_document_number[]
+  tr_handover        tr_handover[]
+  plant              tr_proposed_changes[]
+}
+
+model mst_department {
+  id              Int                      @id @default(autoincrement())
+  department_name String?                  @db.VarChar(255)
+  department_code String?                  @db.VarChar(255)
+  plant_id        Int?
+  status          Boolean                  @default(true)
+  is_deleted      Boolean                  @default(false)
+  created_by      String?
+  created_at      DateTime                 @default(now()) @db.Timestamp(0)
+  updated_by      String?
+  updated_at      DateTime?                @db.Timestamp(0)
+  authorizations  mst_authorization[]
+  plant           mst_plant?               @relation(fields: [plant_id], references: [id])
+  sections        mst_section_department[]
+  departmentAuth  tr_authorization_doc[]
+  tr_handover     tr_handover[]
+  department      tr_proposed_changes[]
+
+  @@index([plant_id], map: "mst_department_plant_id_fkey")
+}
+
+model mst_section_department {
+  id                    Int                                     @id @default(autoincrement())
+  department_id         Int
+  section_name          String?                                 @db.VarChar(255)
+  status                Boolean                                 @default(true)
+  created_by            String?
+  created_at            DateTime                                @default(now()) @db.Timestamp(0)
+  updated_by            String?
+  updated_at            DateTime?                               @db.Timestamp(0)
+  is_deleted            Boolean                                 @default(false)
+  authorizations        mst_authorization[]
+  departmentHeads       mst_department_head[]
+  lines                 mst_line[]
+  department            mst_department                          @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  sectionHeads          mst_section_head[]
+  template_approvals    mst_template_approval_proposedchanges[]
+  sectionDepartmentAuth tr_authorization_doc[]
+  documents             tr_document_number[]
+  tr_handover           tr_handover[]
+  section_department    tr_proposed_changes[]
+  template_approvals_authorization      mst_template_approval_authorization[]
+  template_approvals_handover           mst_template_approval_handover[]
+
+  @@index([department_id], map: "mst_section_department_department_id_fkey")
+}
+
+model mst_document_categories {
+  id                 Int                  @id @default(autoincrement())
+  category           String?              @db.VarChar(255)
+  status             Boolean?             @default(true)
+  is_deleted         Int?                 @default(0)
+  updated_at         DateTime?            @db.Timestamp(0)
+  updated_by         String?
+  additionalDocs     tr_additional_doc[]
+  tr_document_number tr_document_number[]
+}
+
+model tr_document_number {
+  id                   Int                      @id @default(autoincrement())
+  running_number       String?                  @db.VarChar(255)
+  klasifikasi_document String?                  @db.VarChar(255)
+  category_id          Int?
+  plant_id             Int
+  area_id              Int?
+  section_id           Int?
+  auth_id              Int?
+  line_code            String?                  @db.VarChar(255)
+  section_code         String?                  @db.VarChar(255)
+  department_code      String?                  @db.VarChar(255)
+  development_code     String?                  @db.VarChar(255)
+  id_proposed_header   String?                  @db.VarChar(255)
+  sub_document         String?                  @db.VarChar(255)
+  is_internal_memo     Boolean?
+  is_surat_ketentuan   Boolean?
+  created_by           String?                  @db.VarChar(255)
+  created_date         DateTime?                @db.DateTime(0)
+  area                 mst_area?                @relation(fields: [area_id], references: [id])
+  authorization        mst_authorization?       @relation(fields: [auth_id], references: [id])
+  category             mst_document_categories? @relation(fields: [category_id], references: [id])
+  plant                mst_plant                @relation(fields: [plant_id], references: [id])
+  section              mst_section_department?  @relation(fields: [section_id], references: [id])
+  proposedChanges      tr_proposed_changes[]
+
+  @@index([plant_id], map: "tr_document_number_plant_id_fkey")
+  @@index([area_id], map: "tr_document_number_area_id_fkey")
+  @@index([category_id], map: "tr_document_number_category_id_fkey")
+  @@index([section_id], map: "tr_document_number_section_id_fkey")
+  @@index([auth_id])
+}
+
+model tr_additional_doc {
+  id                   Int                      @id @default(autoincrement())
+  running_number       String?                  @db.VarChar(255)
+  klasifikasi_document String?                  @db.VarChar(255)
+  category_id          Int?
+  plant_id             Int
+  auth_id              Int?
+  proposed_change_id   Int?
+  line_code            String?                  @db.VarChar(255)
+  section_code         String?                  @db.VarChar(255)
+  department_code      String?                  @db.VarChar(255)
+  development_code     String?                  @db.VarChar(255)
+  id_proposed_header   String?                  @db.VarChar(255)
+  sub_document         String?                  @db.VarChar(255)
+  is_internal_memo     Boolean?
+  is_surat_ketentuan   Boolean?
+  created_by           String?                  @db.VarChar(255)
+  created_date         DateTime?                @db.DateTime(0)
+  authorization        mst_authorization?       @relation(fields: [auth_id], references: [id])
+  category             mst_document_categories? @relation(fields: [category_id], references: [id])
+  plantsite            mst_plant                @relation(fields: [plant_id], references: [id])
+  proposedChange       tr_proposed_changes?     @relation(fields: [proposed_change_id], references: [id])
+  document_versions    tr_additional_file[]
+
+  @@index([id_proposed_header], map: "tr_proposed_changes_id")
+  @@index([category_id], map: "tr_document_number_category_id_fkey")
+  @@index([auth_id])
+  @@index([proposed_change_id])
+  @@index([plant_id], map: "tr_additional_doc_plant_id_fkey")
+}
+
+model tr_additional_file {
+  id                   Int               @id @default(autoincrement())
+  tr_additional_doc_id Int
+  version              Int               @default(1)
+  mimetype             String?           @db.VarChar(100)
+  file                 String?           @db.VarChar(255)
+  created_by           String?           @db.VarChar(255)
+  created_date         DateTime?         @default(now()) @db.DateTime(0)
+  updated_at           DateTime?         @updatedAt @db.Timestamp(0)
+  updated_by           String?           @db.VarChar(255)
+  is_deleted           Boolean           @default(false)
+  document_versions    tr_additional_doc @relation(fields: [tr_additional_doc_id], references: [id], onDelete: Cascade)
+
+  @@index([tr_additional_doc_id], map: "idx_document_version_doc_id")
+  @@index([file], map: "idx_document_version_file")
+}
+
+model tr_proposed_changes_history {
+  id                         Int                                      @id @default(autoincrement())
+  description                String?                                  @db.VarChar(255)
+  employee_code              String?                                  @db.VarChar(255)
+  proposed_changes_id        Int?
+  auth_id                    Int?
+  note                       String?                                  @db.VarChar(255)
+  status                     String?                                  @db.VarChar(255)
+  created_date               DateTime?                                @db.DateTime(0)
+  updated_date               DateTime?                                @updatedAt @db.Timestamp(0)
+  created_by                 String?                                  @db.VarChar(255)
+  action_type                tr_proposed_changes_history_action_type? @default(approval)
+  related_request_id         Int?
+  related_bypass_id          Int?
+  metadata                   Json?
+  ip_address                 String?                                  @db.VarChar(45)
+  tr_admin_bypass_log        tr_admin_bypass_log?                     @relation(fields: [related_bypass_id], references: [id], onUpdate: NoAction, map: "fk_tpch_related_bypass")
+  tr_approver_change_request tr_approver_change_request?              @relation(fields: [related_request_id], references: [id], onUpdate: NoAction, map: "fk_tpch_related_request")
+  authorization              mst_authorization?                       @relation("AuthToProposedHistory", fields: [auth_id], references: [id])
+  proposedChange             tr_proposed_changes?                     @relation(fields: [proposed_changes_id], references: [id], onDelete: Cascade)
+
+  @@index([proposed_changes_id])
+  @@index([auth_id])
+  @@index([related_bypass_id], map: "fk_tpch_related_bypass")
+  @@index([related_request_id], map: "fk_tpch_related_request")
+  @@index([action_type], map: "idx_action_type")
+  @@index([created_date], map: "idx_created_date")
+  @@map("tr_proposed_changes_history")
+}
+
+model tr_proposed_changes_approval {
+  id                                                                                                          Int                          @id @default(autoincrement())
+  proposed_changes_id                                                                                         Int?
+  auth_id                                                                                                     Int?
+  step                                                                                                        Int?
+  actor                                                                                                       String?                      @db.VarChar(255)
+  employee_code                                                                                               String?                      @db.VarChar(255)
+  status                                                                                                      String?                      @db.VarChar(255)
+  updated_date                                                                                                DateTime?                    @updatedAt @db.Timestamp(0)
+  created_date                                                                                                DateTime?                    @db.DateTime(0)
+  version                                                                                                     Int                          @default(1)
+  original_auth_id                                                                                            Int?
+  changed_from_request_id                                                                                     Int?
+  change_reason                                                                                               String?                      @db.Text
+  changed_by                                                                                                  Int?
+  changed_date                                                                                                DateTime?                    @db.DateTime(0)
+  is_changed                                                                                                  Boolean                      @default(false)
+  note                                                                                                        String?                      @db.Text
+  tr_approver_change_history                                                                                  tr_approver_change_history[]
+  tr_approver_change_request_tr_approver_change_request_approval_idTotr_proposed_changes_approval             tr_approver_change_request[] @relation("tr_approver_change_request_approval_idTotr_proposed_changes_approval")
+  tr_approver_change_request_tr_proposed_changes_approval_changed_from_request_idTotr_approver_change_request tr_approver_change_request?  @relation("tr_proposed_changes_approval_changed_from_request_idTotr_approver_change_request", fields: [changed_from_request_id], references: [id], onUpdate: NoAction, map: "fk_tpca_change_request")
+  mst_authorization_tr_proposed_changes_approval_changed_byTomst_authorization                                mst_authorization?           @relation("tr_proposed_changes_approval_changed_byTomst_authorization", fields: [changed_by], references: [id], onUpdate: NoAction, map: "fk_tpca_changed_by_admin")
+  mst_authorization_tr_proposed_changes_approval_original_auth_idTomst_authorization                          mst_authorization?           @relation("tr_proposed_changes_approval_original_auth_idTomst_authorization", fields: [original_auth_id], references: [id], onUpdate: NoAction, map: "fk_tpca_original_approver")
+  authorization                                                                                               mst_authorization?           @relation("AuthToProposedApproval", fields: [auth_id], references: [id])
+  proposedChange                                                                                              tr_proposed_changes?         @relation(fields: [proposed_changes_id], references: [id], onDelete: Cascade)
+
+  @@index([proposed_changes_id])
+  @@index([auth_id])
+  @@index([changed_by], map: "fk_tpca_changed_by_admin")
+  @@index([changed_date], map: "idx_changed_date")
+  @@index([changed_from_request_id], map: "idx_changed_from_request_id")
+  @@index([is_changed], map: "idx_is_changed")
+  @@index([original_auth_id], map: "idx_original_auth_id")
+  @@index([status, step], map: "idx_tr_proposed_changes_approval_status_step")
+  @@index([version], map: "idx_version")
+  @@map("tr_proposed_changes_approval")
+}
+
+// ==========================================
+// UPDATED AUTHORIZATION TABLES WITH NEW FIELDS
+// ==========================================
+
+model tr_authdoc_approval {
+  id                                  Int                                    @id @default(autoincrement())
+  authdoc_id                          Int?
+  auth_id                             Int?
+  step                                Int?
+  actor                               String?                                @db.VarChar(255)
+  employee_code                       String?                                @db.VarChar(255)
+  status                              String?                                @db.VarChar(255)
+  updated_date                        DateTime?                              @updatedAt @db.Timestamp(0)
+  created_date                        DateTime?                              @db.DateTime(0)
+  
+  // NEW FIELDS FOR APPROVER CHANGE MANAGEMENT
+  version                             Int                                    @default(1)
+  original_auth_id                    Int?
+  changed_from_request_id             Int?
+  change_reason                       String?                                @db.Text
+  changed_by                          Int?
+  changed_date                        DateTime?                              @db.DateTime(0)
+  is_changed                          Boolean                                @default(false)
+  note                                String?                                @db.Text
+  
+  // EXISTING RELATIONS
+  authorization                       mst_authorization?                     @relation("AuthToAuthdocApproval", fields: [auth_id], references: [id])
+  authorization_doc                   tr_authorization_doc?                  @relation("DocToAuthdocApproval", fields: [authdoc_id], references: [id])
+  
+  // NEW RELATIONS FOR APPROVER CHANGE MANAGEMENT
+  tr_approver_change_history_authdoc  tr_approver_change_history_authdoc[]   @relation("ApprovalToChangeHistory")
+  tr_approver_change_request_authdoc  tr_approver_change_request_authdoc[]   @relation("ChangeRequestToApproval")
+  changed_from_request                tr_approver_change_request_authdoc?    @relation("ChangedFromRequestToApproval", fields: [changed_from_request_id], references: [id], onUpdate: NoAction, map: "fk_taa_change_request")
+  changed_by_authorization            mst_authorization?                     @relation("ChangedByAuthToApproval", fields: [changed_by], references: [id], onUpdate: NoAction, map: "fk_taa_changed_by_admin")
+  original_authorization              mst_authorization?                     @relation("OriginalAuthToApproval", fields: [original_auth_id], references: [id], onUpdate: NoAction, map: "fk_taa_original_approver")
+
+  // EXISTING INDEXES
+  @@index([authdoc_id])
+  @@index([auth_id])
+  
+  // NEW INDEXES FOR APPROVER CHANGE MANAGEMENT
+  @@index([changed_by], map: "fk_taa_changed_by_admin")
+  @@index([changed_date], map: "idx_authdoc_changed_date")
+  @@index([changed_from_request_id], map: "idx_authdoc_changed_from_request_id")
+  @@index([is_changed], map: "idx_authdoc_is_changed")
+  @@index([original_auth_id], map: "idx_authdoc_original_auth_id")
+  @@index([status, step], map: "idx_authdoc_status_step")
+  @@index([version], map: "idx_authdoc_version")
+}
+
+model tr_authdoc_history {
+  id                              Int                                      @id @default(autoincrement())
+  description                     String?                                  @db.VarChar(255)
+  employee_code                   String?                                  @db.VarChar(255)
+  authdoc_id                      Int?
+  auth_id                         Int?
+  note                            String?                                  @db.VarChar(255)
+  status                          String?                                  @db.VarChar(255)
+  created_date                    DateTime?                                @db.DateTime(0)
+  updated_date                    DateTime?                                @updatedAt @db.Timestamp(0)
+  created_by                      String?                                  @db.VarChar(255)
+  
+  // NEW FIELDS FOR APPROVER CHANGE MANAGEMENT
+  action_type                     tr_authdoc_history_action_type?          @default(approval)
+  related_request_id              Int?
+  related_bypass_id               Int?
+  metadata                        Json?
+  ip_address                      String?                                  @db.VarChar(45)
+  
+  // EXISTING RELATIONS
+  authorization                   mst_authorization?                       @relation("AuthToAuthdocHistory", fields: [auth_id], references: [id])
+  authorization_doc               tr_authorization_doc?                    @relation("DocToAuthdocHistory", fields: [authdoc_id], references: [id])
+  
+  // NEW RELATIONS FOR APPROVER CHANGE MANAGEMENT
+  tr_admin_bypass_log_authdoc     tr_admin_bypass_log_authdoc?             @relation(fields: [related_bypass_id], references: [id], onUpdate: NoAction, map: "fk_tah_related_bypass")
+  tr_approver_change_request_authdoc tr_approver_change_request_authdoc?  @relation(fields: [related_request_id], references: [id], onUpdate: NoAction, map: "fk_tah_related_request")
+
+  // EXISTING INDEXES
+  @@index([authdoc_id])
+  @@index([auth_id])
+  
+  // NEW INDEXES FOR APPROVER CHANGE MANAGEMENT
+  @@index([related_bypass_id], map: "fk_tah_related_bypass")
+  @@index([related_request_id], map: "fk_tah_related_request")
+  @@index([action_type], map: "idx_authdoc_action_type")
+  @@index([created_date], map: "idx_authdoc_created_date")
+}
+
+// ==========================================
+// NEW TABLES FOR AUTHORIZATION DOCUMENT FEATURES
+// ==========================================
+
+// 1. ADMIN BYPASS LOG FOR AUTHORIZATION DOCUMENTS
+model tr_admin_bypass_log_authdoc {
+  id                          Int                                      @id @default(autoincrement())
+  authorization_doc_id        Int
+  admin_auth_id               Int
+  bypass_type                 String                                   @default("approval_system") @db.VarChar(50)
+  target_status               String                                   @db.VarChar(50)
+  original_status             String?                                  @db.VarChar(50)
+  original_progress           String?                                  @db.VarChar(10)
+  new_progress                String?                                  @db.VarChar(10)
+  reason                      String                                   @db.Text
+  affected_approvers_count    Int                                      @default(0)
+  affected_approvers_list     Json?
+  bypass_timestamp            DateTime                                 @default(now()) @db.DateTime(0)
+  ip_address                  String?                                  @db.VarChar(45)
+  user_agent                  String?                                  @db.Text
+  created_date                DateTime                                 @default(now()) @db.DateTime(0)
+  is_deleted                  Boolean                                  @default(false)
+  
+  // Relations
+  mst_authorization           mst_authorization                        @relation("AdminBypassAuthdocToAuth", fields: [admin_auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_abl_authdoc_admin")
+  tr_authorization_doc        tr_authorization_doc                     @relation("AdminBypassAuthdocToDoc", fields: [authorization_doc_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_abl_authdoc_doc")
+  tr_authdoc_history          tr_authdoc_history[]
+
+  @@index([admin_auth_id], map: "idx_authdoc_admin_auth_id")
+  @@index([bypass_timestamp], map: "idx_authdoc_bypass_timestamp")
+  @@index([bypass_type], map: "idx_authdoc_bypass_type")
+  @@index([created_date], map: "idx_authdoc_created_date")
+  @@index([authorization_doc_id], map: "idx_authdoc_doc_id")
+  @@index([target_status], map: "idx_authdoc_target_status")
+}
+
+// 2. APPROVER CHANGE REQUEST FOR AUTHORIZATION DOCUMENTS
+model tr_approver_change_request_authdoc {
+  id                                  Int                                         @id @default(autoincrement())
+  authorization_doc_id                Int
+  approval_id                         Int
+  current_auth_id                     Int
+  new_auth_id                         Int
+  reason                              String                                      @db.Text
+  urgent                              Boolean                                     @default(false)
+  requested_by                        String                                      @db.VarChar(100)
+  requester_auth_id                   Int?
+  status                              tr_approver_change_request_authdoc_status   @default(pending)
+  admin_decision                      String?                                     @db.Text
+  processed_by                        String?                                     @db.VarChar(100)
+  processed_by_auth_id                Int?
+  processed_date                      DateTime?                                   @db.DateTime(0)
+  version_before                      Int                                         @default(1)
+  version_after                       Int?
+  request_type                        String                                      @default("approver_change") @db.VarChar(50)
+  priority                            tr_approver_change_request_authdoc_priority @default(normal)
+  created_date                        DateTime                                    @default(now()) @db.DateTime(0)
+  updated_date                        DateTime?                                   @db.DateTime(0)
+  is_deleted                          Boolean                                     @default(false)
+  
+  // Relations
+  tr_approver_change_history_authdoc  tr_approver_change_history_authdoc[]
+  tr_authdoc_approval                 tr_authdoc_approval                         @relation("ChangeRequestToApproval", fields: [approval_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_authdoc_approval")
+  current_authorization               mst_authorization                           @relation("CurrentAuthToChangeRequest", fields: [current_auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_authdoc_current_approver")
+  new_authorization                   mst_authorization                           @relation("NewAuthToChangeRequest", fields: [new_auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_authdoc_new_approver")
+  processed_by_authorization          mst_authorization?                          @relation("ProcessorAuthToChangeRequest", fields: [processed_by_auth_id], references: [id], onUpdate: NoAction, map: "fk_acr_authdoc_processor")
+  tr_authorization_doc                tr_authorization_doc                        @relation("ChangeRequestToAuthdoc", fields: [authorization_doc_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_authdoc_doc")
+  requester_authorization             mst_authorization?                          @relation("RequesterAuthToChangeRequest", fields: [requester_auth_id], references: [id], onUpdate: NoAction, map: "fk_acr_authdoc_requester")
+  tr_authdoc_approval_changed         tr_authdoc_approval[]                       @relation("ChangedFromRequestToApproval")
+  tr_authdoc_history                  tr_authdoc_history[]
+
+  @@index([processed_by_auth_id], map: "fk_acr_authdoc_processor")
+  @@index([requester_auth_id], map: "fk_acr_authdoc_requester")
+  @@index([approval_id], map: "idx_authdoc_approval_id")
+  @@index([created_date], map: "idx_authdoc_created_date")
+  @@index([current_auth_id], map: "idx_authdoc_current_auth_id")
+  @@index([new_auth_id], map: "idx_authdoc_new_auth_id")
+  @@index([priority], map: "idx_authdoc_priority")
+  @@index([processed_date], map: "idx_authdoc_processed_date")
+  @@index([authorization_doc_id], map: "idx_authdoc_doc_id")
+  @@index([status], map: "idx_authdoc_status")
+  @@index([urgent], map: "idx_authdoc_urgent")
+}
+
+// 3. APPROVER CHANGE HISTORY FOR AUTHORIZATION DOCUMENTS
+model tr_approver_change_history_authdoc {
+  id                              Int                                            @id @default(autoincrement())
+  approval_id                     Int
+  authorization_doc_id            Int
+  change_request_id               Int?
+  action_type                     tr_approver_change_history_authdoc_action_type
+  from_auth_id                    Int?
+  to_auth_id                      Int?
+  version_from                    Int?
+  version_to                      Int?
+  reason                          String?                                        @db.Text
+  actor_auth_id                   Int?
+  actor_name                      String?                                        @db.VarChar(255)
+  actor_role                      String?                                        @db.VarChar(50)
+  metadata                        Json?
+  created_date                    DateTime                                       @default(now()) @db.DateTime(0)
+  ip_address                      String?                                        @db.VarChar(45)
+  
+  // Relations
+  actor_authorization             mst_authorization?                             @relation("ActorAuthToChangeHistory", fields: [actor_auth_id], references: [id], onUpdate: NoAction, map: "fk_ach_authdoc_actor")
+  tr_authdoc_approval             tr_authdoc_approval                            @relation("ApprovalToChangeHistory", fields: [approval_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ach_authdoc_approval")
+  tr_approver_change_request_authdoc tr_approver_change_request_authdoc?        @relation(fields: [change_request_id], references: [id], onUpdate: NoAction, map: "fk_ach_authdoc_change_request")
+  from_authorization              mst_authorization?                             @relation("FromAuthToChangeHistory", fields: [from_auth_id], references: [id], onUpdate: NoAction, map: "fk_ach_authdoc_from_approver")
+  tr_authorization_doc            tr_authorization_doc                           @relation("DocToChangeHistory", fields: [authorization_doc_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ach_authdoc_doc")
+  to_authorization                mst_authorization?                             @relation("ToAuthToChangeHistory", fields: [to_auth_id], references: [id], onUpdate: NoAction, map: "fk_ach_authdoc_to_approver")
+
+  @@index([from_auth_id], map: "fk_ach_authdoc_from_approver")
+  @@index([to_auth_id], map: "fk_ach_authdoc_to_approver")
+  @@index([action_type], map: "idx_authdoc_action_type")
+  @@index([actor_auth_id], map: "idx_authdoc_actor_auth_id")
+  @@index([approval_id], map: "idx_authdoc_approval_id")
+  @@index([change_request_id], map: "idx_authdoc_change_request_id")
+  @@index([created_date], map: "idx_authdoc_created_date")
+  @@index([authorization_doc_id], map: "idx_authdoc_doc_id")
+}
+
+// 4. NOTIFICATION LOG FOR AUTHORIZATION DOCUMENTS
+model tr_notification_log_authdoc {
+  id                Int      @id @default(autoincrement())
+  notification_type String   @db.VarChar(100)
+  recipients        Json
+  sent_count        Int      @default(0)
+  failed_count      Int      @default(0)
+  urgent            Boolean  @default(false)
+  related_id        Int?
+  details           Json?
+  created_date      DateTime @default(now()) @db.DateTime(0)
+
+  @@index([created_date], map: "idx_authdoc_created_date")
+  @@index([notification_type], map: "idx_authdoc_notification_type")
+  @@index([urgent], map: "idx_authdoc_urgent")
+}
+
+model mst_authorization {
+  id                                                                                            Int                            @id @default(autoincrement())
+  employee_code                                                                                 String?                        @db.VarChar(255)
+  employee_name                                                                                 String?                        @db.VarChar(255)
+  email                                                                                         String?                        @db.VarChar(255)
+  number_phone                                                                                  String?                        @db.VarChar(20)
+  gender                                                                                        Gender?                        @default(M)
+  department_id                                                                                 Int?
+  section_id                                                                                    Int?
+  plant_id                                                                                      Int?
+  role_id                                                                                       Int?
+  status                                                                                        Boolean?
+  created_at                                                                                    DateTime                       @default(now()) @db.Timestamp(0)
+  created_by                                                                                    String?
+  updated_at                                                                                    DateTime                       @default(now()) @updatedAt @db.Timestamp(0)
+  updated_by                                                                                    String?
+  is_deleted                                                                                    Boolean                        @default(false)
+  user_role                                                                                     String?                        @default("user") @db.VarChar(20)
+  email_verified                                                                                Boolean                        @default(false)
+  notification_enabled                                                                          Boolean                        @default(true)
+  phone_number                                                                                  String?                        @db.VarChar(20)
+  notification_preferences                                                                      Json?
+  password                                                                                      String?                        @db.VarChar(255)
+  
+  // EXISTING RELATIONS
+  department                                                                                    mst_department?                @relation(fields: [department_id], references: [id])
+  plant                                                                                         mst_plant?                     @relation(fields: [plant_id], references: [id])
+  role                                                                                          mst_role?                      @relation(fields: [role_id], references: [id])
+  section                                                                                       mst_section_department?        @relation(fields: [section_id], references: [id])
+  departmentHeads                                                                               mst_department_head[]
+  sectionHeads                                                                                  mst_section_head[]
+  authorization                                                                                 tr_additional_doc[]
+  tr_admin_bypass_log                                                                           tr_admin_bypass_log[]
+  tr_approver_change_history_tr_approver_change_history_actor_auth_idTomst_authorization        tr_approver_change_history[]   @relation("tr_approver_change_history_actor_auth_idTomst_authorization")
+  tr_approver_change_history_tr_approver_change_history_from_auth_idTomst_authorization         tr_approver_change_history[]   @relation("tr_approver_change_history_from_auth_idTomst_authorization")
+  tr_approver_change_history_tr_approver_change_history_to_auth_idTomst_authorization           tr_approver_change_history[]   @relation("tr_approver_change_history_to_auth_idTomst_authorization")
+  tr_approver_change_request_tr_approver_change_request_current_auth_idTomst_authorization      tr_approver_change_request[]   @relation("tr_approver_change_request_current_auth_idTomst_authorization")
+  tr_approver_change_request_tr_approver_change_request_new_auth_idTomst_authorization          tr_approver_change_request[]   @relation("tr_approver_change_request_new_auth_idTomst_authorization")
+  tr_approver_change_request_tr_approver_change_request_processed_by_auth_idTomst_authorization tr_approver_change_request[]   @relation("tr_approver_change_request_processed_by_auth_idTomst_authorization")
+  tr_approver_change_request_tr_approver_change_request_requester_auth_idTomst_authorization    tr_approver_change_request[]   @relation("tr_approver_change_request_requester_auth_idTomst_authorization")
+  authdocApprovals                                                                              tr_authdoc_approval[]          @relation("AuthToAuthdocApproval")
+  authdocHistories                                                                              tr_authdoc_history[]           @relation("AuthToAuthdocHistory")
+  authorizationDocs                                                                             tr_authorization_doc[]
+  documentNumbers                                                                               tr_document_number[]
+  tr_handover_tr_handover_auth_idTomst_authorization                                            tr_handover[]                  @relation("tr_handover_auth_idTomst_authorization")
+  tr_handover_tr_handover_auth_id5Tomst_authorization                                           tr_handover[]                  @relation("tr_handover_auth_id5Tomst_authorization")
+  tr_handover_tr_handover_auth_id2Tomst_authorization                                           tr_handover[]                  @relation("tr_handover_auth_id2Tomst_authorization")
+  tr_handover_tr_handover_auth_id3Tomst_authorization                                           tr_handover[]                  @relation("tr_handover_auth_id3Tomst_authorization")
+  tr_handover_tr_handover_auth_id4Tomst_authorization                                           tr_handover[]                  @relation("tr_handover_auth_id4Tomst_authorization")
+  tr_handover_approval                                                                          tr_handover_approval[]
+  tr_handover_history                                                                           tr_handover_history[]
+  tr_proposed_changes_tr_proposed_changes_bypass_byTomst_authorization                          tr_proposed_changes[]          @relation("tr_proposed_changes_bypass_byTomst_authorization")
+  mainProposedChanges                                                                           tr_proposed_changes[]          @relation("AuthToProposedChanges")
+  tr_proposed_changes_approval_tr_proposed_changes_approval_changed_byTomst_authorization       tr_proposed_changes_approval[] @relation("tr_proposed_changes_approval_changed_byTomst_authorization")
+  tr_proposed_changes_approval_tr_proposed_changes_approval_original_auth_idTomst_authorization tr_proposed_changes_approval[] @relation("tr_proposed_changes_approval_original_auth_idTomst_authorization")
+  approvals                                                                                     tr_proposed_changes_approval[] @relation("AuthToProposedApproval")
+  historyproposedchanges                                                                        tr_proposed_changes_history[]  @relation("AuthToProposedHistory")
+
+  // NEW RELATIONS FOR AUTHORIZATION DOCUMENT FEATURES
+  tr_admin_bypass_log_authdoc_AdminBypassAuthdocToAuth                                         tr_admin_bypass_log_authdoc[]          @relation("AdminBypassAuthdocToAuth")
+  tr_approver_change_request_authdoc_CurrentAuthToChangeRequest                                tr_approver_change_request_authdoc[]   @relation("CurrentAuthToChangeRequest")
+  tr_approver_change_request_authdoc_NewAuthToChangeRequest                                    tr_approver_change_request_authdoc[]   @relation("NewAuthToChangeRequest")
+  tr_approver_change_request_authdoc_ProcessorAuthToChangeRequest                              tr_approver_change_request_authdoc[]   @relation("ProcessorAuthToChangeRequest")
+  tr_approver_change_request_authdoc_RequesterAuthToChangeRequest                              tr_approver_change_request_authdoc[]   @relation("RequesterAuthToChangeRequest")
+  tr_approver_change_history_authdoc_ActorAuthToChangeHistory                                  tr_approver_change_history_authdoc[]   @relation("ActorAuthToChangeHistory")
+  tr_approver_change_history_authdoc_FromAuthToChangeHistory                                   tr_approver_change_history_authdoc[]   @relation("FromAuthToChangeHistory")
+  tr_approver_change_history_authdoc_ToAuthToChangeHistory                                     tr_approver_change_history_authdoc[]   @relation("ToAuthToChangeHistory")
+  tr_authdoc_approval_ChangedByAuthToApproval                                                  tr_authdoc_approval[]                  @relation("ChangedByAuthToApproval")
+  tr_authdoc_approval_OriginalAuthToApproval                                                   tr_authdoc_approval[]                  @relation("OriginalAuthToApproval")
+
+  @@index([department_id], map: "mst_authorization_department_id_fkey")
+  @@index([plant_id], map: "mst_authorization_plant_id_fkey")
+  @@index([role_id], map: "mst_authorization_role_id_fkey")
+  @@index([section_id], map: "mst_authorization_section_id_fkey")
+  @@index([employee_code])
+  @@index([user_role, status, is_deleted], map: "idx_mst_authorization_user_role_status")
+  @@index([status, notification_enabled], map: "idx_status_notification")
+  @@index([user_role], map: "idx_user_role")
+}
+
+model tbl_support_document {
+  id              Int                          @id @default(autoincrement())
+  support_doc_id  Int?
+  proposed_id     Int?
+  document_type   String?                      @db.VarChar(255)
+  title           String?                      @db.VarChar(255)
+  status          Boolean?                     @default(false)
+  created_by      String?                      @db.VarChar(255)
+  created_date    DateTime?                    @db.DateTime(0)
+  updated_at      DateTime?                    @updatedAt @db.Timestamp(0)
+  updated_by      String?                      @db.VarChar(255)
+  is_deleted      Boolean                      @default(false)
+  proposedChange  tr_proposed_changes?         @relation(fields: [proposed_id], references: [id], onDelete: Cascade)
+  supportDocument mst_support_document?        @relation(fields: [support_doc_id], references: [id], onDelete: Cascade)
+  fileVersions    tbl_support_document_file[]
+  notedVersions   tbl_support_document_noted[]
+
+  @@index([support_doc_id])
+  @@index([proposed_id])
+  @@map("tbl_support_document")
+}
+
+model tbl_support_document_noted {
+  id              Int                  @id @default(autoincrement())
+  support_doc_id  Int
+  version         Int                  @default(1)
+  noted           String?              @db.Text
+  status          Boolean?             @default(false)
+  created_by      String?              @db.VarChar(255)
+  created_date    DateTime?            @db.DateTime(0)
+  updated_at      DateTime?            @updatedAt @db.Timestamp(0)
+  updated_by      String?              @db.VarChar(255)
+  is_deleted      Boolean              @default(false)
+  supportDocument tbl_support_document @relation(fields: [support_doc_id], references: [id], onDelete: Cascade)
+
+  @@unique([support_doc_id, version])
+  @@map("tbl_support_document_noted")
+}
+
+model tbl_support_document_file {
+  id              Int                  @id @default(autoincrement())
+  support_doc_id  Int
+  version         Int                  @default(1)
+  file            String?              @db.VarChar(255)
+  status          Boolean?             @default(false)
+  created_by      String?              @db.VarChar(255)
+  created_date    DateTime?            @db.DateTime(0)
+  updated_at      DateTime?            @updatedAt @db.Timestamp(0)
+  updated_by      String?              @db.VarChar(255)
+  is_deleted      Boolean              @default(false)
+  supportDocument tbl_support_document @relation(fields: [support_doc_id], references: [id], onDelete: Cascade)
+
+  @@unique([support_doc_id, version])
+  @@map("tbl_support_document_file")
+}
+
+model mst_support_document {
+  id              Int                    @id @default(autoincrement())
+  document_type   String?                @db.VarChar(255)
+  status          Boolean?               @default(true)
+  is_deleted      Int?                   @default(0)
+  updated_at      DateTime?              @db.Timestamp(0)
+  updated_by      String?
+  supportDocument tbl_support_document[]
+}
+
+model tr_authdoc_member {
+  id                Int                   @id @default(autoincrement())
+  authdoc_id        Int?
+  employee_code     String?               @db.VarChar(255)
+  employee_name     String?               @db.VarChar(255)
+  status            String?               @db.VarChar(255)
+  created_date      DateTime?             @db.DateTime(0)
+  is_deleted        Boolean
+  authorization_doc tr_authorization_doc? @relation("DocToAuthdocMember", fields: [authdoc_id], references: [id])
+
+  @@index([authdoc_id])
+}
+
+model tr_authorization_doc {
+  id                     Int                      @id @default(autoincrement())
+  proposed_change_id     Int?
+  doc_number             String?                  @db.VarChar(255)
+  implementation_date    DateTime?                @db.Date
+  evaluation             String?                  @db.Text
+  description            String?                  @db.Text
+  conclution             String?                  @db.Text
+  concept                String?                  @db.VarChar(255)
+  standart               String?                  @db.Text
+  method                 String?                  @db.VarChar(255)
+  status                 String?                  @db.Text
+  progress               String?                  @db.VarChar(255)
+  created_by             String?                  @db.VarChar(255)
+  auth_id                Int?
+  plant_id               Int?
+  created_date           DateTime?                @db.DateTime(0)
+  department_id          Int?
+  section_department_id  Int?
+  updated_at             DateTime?                @db.Timestamp(0)
+  
+  // EXISTING RELATIONS
+  email_tracking_authdoc email_tracking_authdoc[]
+  authdocApprovals       tr_authdoc_approval[]    @relation("DocToAuthdocApproval")
+  authdocHistories       tr_authdoc_history[]     @relation("DocToAuthdocHistory")
+  authdocMembers         tr_authdoc_member[]      @relation("DocToAuthdocMember")
+  authorization          mst_authorization?       @relation(fields: [auth_id], references: [id])
+  department             mst_department?          @relation(fields: [department_id], references: [id])
+  authorizationPlant     mst_plant?               @relation(fields: [plant_id], references: [id])
+  proposedChange         tr_proposed_changes?     @relation(fields: [proposed_change_id], references: [id])
+  section_department     mst_section_department?  @relation(fields: [section_department_id], references: [id])
+  tr_handover            tr_handover[]
+
+  // NEW RELATIONS FOR AUTHORIZATION DOCUMENT FEATURES
+  tr_admin_bypass_log_authdoc_AdminBypassAuthdocToDoc                          tr_admin_bypass_log_authdoc[]          @relation("AdminBypassAuthdocToDoc")
+  tr_approver_change_request_authdoc_ChangeRequestToAuthdoc                    tr_approver_change_request_authdoc[]   @relation("ChangeRequestToAuthdoc")
+  tr_approver_change_history_authdoc_DocToChangeHistory                        tr_approver_change_history_authdoc[]   @relation("DocToChangeHistory")
+
+  @@index([proposed_change_id], map: "tr_additional_doc_proposed_change_id_fkey")
+  @@index([auth_id], map: "tr_additional_doc_auth_id_fkey")
+  @@index([plant_id], map: "tr_additional_doc_plant_id_fkey")
+  @@index([department_id], map: "tr_additional_doc_department_id_fkey")
+  @@index([section_department_id], map: "tr_additional_doc_section_department_id_fkey")
+}
+
+model tr_proposed_changes {
+  id                                                                 Int                              @id @default(autoincrement())
+  project_name                                                       String?                          @db.VarChar(255)
+  document_number_id                                                 Int?
+  item_changes                                                       String?                          @db.VarChar(255)
+  line_code                                                          String?                          @db.VarChar(255)
+  section_code                                                       String?                          @db.VarChar(255)
+  section_name                                                       String?                          @db.VarChar(255)
+  department_id                                                      Int?
+  section_department_id                                              Int?
+  plant_id                                                           Int?
+  auth_id                                                            Int?
+  change_type                                                        String?                          @db.VarChar(255)
+  description                                                        String?                          @db.Text
+  reason                                                             String?                          @db.Text
+  cost                                                               String?                          @db.VarChar(255)
+  cost_text                                                          String?                          @db.VarChar(255)
+  planning_start                                                     DateTime?                        @db.Date
+  planning_end                                                       DateTime?                        @db.Date
+  created_date                                                       DateTime?                        @db.DateTime(0)
+  created_by                                                         String?                          @db.VarChar(255)
+  updated_at                                                         DateTime?                        @updatedAt @db.Timestamp(0)
+  need_engineering_approval                                          Boolean?
+  need_production_approval                                           Boolean?
+  other_sytem                                                        String?                          @db.VarChar(255)
+  status                                                             String?                          @default("submitted") @db.VarChar(255)
+  progress                                                           String?                          @db.VarChar(255)
+  is_deleted                                                         Boolean                          @default(false)
+  progresssupport                                                    String?                          @default("0%") @db.VarChar(255)
+  bypass_by                                                          Int?
+  bypass_date                                                        DateTime?                        @db.DateTime(0)
+  bypass_reason                                                      String?                          @db.Text
+  is_bypassed                                                        Boolean                          @default(false)
+  email_tracking_proposedchanges                                     email_tracking_proposedchanges[]
+  proposedChange                                                     tbl_support_document[]
+  additionalDocs                                                     tr_additional_doc[]
+  tr_admin_bypass_log                                                tr_admin_bypass_log[]
+  tr_approver_change_history                                         tr_approver_change_history[]
+  tr_approver_change_request                                         tr_approver_change_request[]
+  authorizationDocs                                                  tr_authorization_doc[]
+  tr_handover                                                        tr_handover[]
+  mst_authorization_tr_proposed_changes_bypass_byTomst_authorization mst_authorization?               @relation("tr_proposed_changes_bypass_byTomst_authorization", fields: [bypass_by], references: [id], onUpdate: NoAction, map: "fk_tpc_bypass_admin")
+  mainProposedChanges                                                mst_authorization?               @relation("AuthToProposedChanges", fields: [auth_id], references: [id])
+  department                                                         mst_department?                  @relation(fields: [department_id], references: [id])
+  documentNumber                                                     tr_document_number?              @relation(fields: [document_number_id], references: [id])
+  plant                                                              mst_plant?                       @relation(fields: [plant_id], references: [id])
+  section_department                                                 mst_section_department?          @relation(fields: [section_department_id], references: [id])
+  approvals                                                          tr_proposed_changes_approval[]
+  changeHistories                                                    tr_proposed_changes_history[]
+
+  @@index([plant_id], map: "tr_proposed_changes_plant_id_fkey")
+  @@index([department_id], map: "tr_proposed_changes_department_id_fkey")
+  @@index([section_department_id], map: "tr_proposed_changes_section_department_id_fkey")
+  @@index([document_number_id], map: "tr_proposed_changes_document_number_id_fkey")
+  @@index([auth_id])
+  @@index([bypass_by], map: "idx_bypass_by")
+  @@index([bypass_date], map: "idx_bypass_date")
+  @@index([is_bypassed], map: "idx_is_bypassed")
+  @@index([status, progress], map: "idx_tr_proposed_changes_status_progress")
+}
+
+model tr_handover {
+  id                                                        Int                       @id @default(autoincrement())
+  doc_number                                                String?                   @db.VarChar(255)
+  auth_id                                                   Int?
+  auth_id2                                                  Int?
+  auth_id3                                                  Int?
+  auth_id4                                                  Int?
+  auth_id5                                                  Int?
+  proposed_change_id                                        Int?
+  authdoc_id                                                Int?
+  plant_id                                                  Int?
+  department_id                                             Int?
+  section_department_id                                     Int?
+  progress                                                  String?                   @db.VarChar(255)
+  status                                                    String?                   @db.VarChar(255)
+  material                                                  String?                   @db.Text
+  remark                                                    String?                   @db.Text
+  created_by                                                String?                   @db.VarChar(255)
+  created_date                                              DateTime?                 @db.DateTime(0)
+  updated_at                                                DateTime?                 @db.DateTime(0)
+  updated_by                                                String?                   @db.VarChar(255)
+  is_deleted                                                Boolean?                  @default(false)
+  finished_date                                             DateTime?                 @db.DateTime(0)
+  is_finished                                               Boolean?                  @default(false)
+  star                                                      Decimal?
+  email_tracking_handover                                   email_tracking_handover[]
+  mst_authorization_tr_handover_auth_idTomst_authorization  mst_authorization?        @relation("tr_handover_auth_idTomst_authorization", fields: [auth_id], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_1")
+  mst_authorization_tr_handover_auth_id5Tomst_authorization mst_authorization?        @relation("tr_handover_auth_id5Tomst_authorization", fields: [auth_id5], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_10")
+  mst_authorization_tr_handover_auth_id2Tomst_authorization mst_authorization?        @relation("tr_handover_auth_id2Tomst_authorization", fields: [auth_id2], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_2")
+  mst_authorization_tr_handover_auth_id3Tomst_authorization mst_authorization?        @relation("tr_handover_auth_id3Tomst_authorization", fields: [auth_id3], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_3")
+  mst_authorization_tr_handover_auth_id4Tomst_authorization mst_authorization?        @relation("tr_handover_auth_id4Tomst_authorization", fields: [auth_id4], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_4")
+  tr_proposed_changes                                       tr_proposed_changes?      @relation(fields: [proposed_change_id], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_5")
+  tr_authorization_doc                                      tr_authorization_doc?     @relation(fields: [authdoc_id], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_6")
+  mst_plant                                                 mst_plant?                @relation(fields: [plant_id], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_7")
+  mst_department                                            mst_department?           @relation(fields: [department_id], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_8")
+  mst_section_department                                    mst_section_department?   @relation(fields: [section_department_id], references: [id], onUpdate: NoAction, map: "tr_handover_ibfk_9")
+  tr_handover_approval                                      tr_handover_approval[]
+  tr_handover_history                                       tr_handover_history[]
+
+  @@index([auth_id], map: "auth_id")
+  @@index([auth_id2], map: "auth_id2")
+  @@index([auth_id3], map: "auth_id3")
+  @@index([auth_id4], map: "auth_id4")
+  @@index([authdoc_id], map: "authdoc_id")
+  @@index([department_id], map: "department_id")
+  @@index([plant_id], map: "plant_id")
+  @@index([proposed_change_id], map: "proposed_change_id")
+  @@index([section_department_id], map: "section_department_id")
+  @@index([auth_id5], map: "auth_id5")
+}
+
+model tr_handover_approval {
+  id                        Int                @id @default(autoincrement())
+  handover_id               Int?
+  auth_id                   Int?
+  step                      Int?
+  actor                     String?            @db.VarChar(255)
+  employee_code             String?            @db.VarChar(255)
+  status                    String?            @db.VarChar(255)
+  updated_date              DateTime?          @db.DateTime(0)
+  created_date              DateTime?          @db.DateTime(0)
+  last_rating_reminder_sent DateTime?
+  rating_reminder_count     Int?               @default(0)
+  finished_date             DateTime?
+  rating                    Int?
+  review                    String?            @db.Text
+  rating_date               DateTime?
+  tr_handover               tr_handover?       @relation(fields: [handover_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tr_handover_approval_ibfk_1")
+  mst_authorization         mst_authorization? @relation(fields: [auth_id], references: [id], onUpdate: NoAction, map: "tr_handover_approval_ibfk_2")
+
+  @@index([auth_id], map: "auth_id")
+  @@index([handover_id], map: "handover_id")
+}
+
+model tr_handover_history {
+  id                Int                @id @default(autoincrement())
+  description       String?            @db.VarChar(255)
+  employee_code     String?            @db.VarChar(255)
+  handover_id       Int?
+  auth_id           Int?
+  note              String?            @db.VarChar(255)
+  status            String?            @db.VarChar(255)
+  created_date      DateTime?          @db.DateTime(0)
+  updated_date      DateTime?          @db.DateTime(0)
+  created_by        String?            @db.VarChar(255)
+  tr_handover       tr_handover?       @relation(fields: [handover_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tr_handover_history_ibfk_1")
+  mst_authorization mst_authorization? @relation(fields: [auth_id], references: [id], onUpdate: NoAction, map: "tr_handover_history_ibfk_2")
+
+  @@index([auth_id], map: "auth_id")
+  @@index([handover_id], map: "handover_id")
+}
+
+model email_tracking_handover {
+  id              Int                                    @id @default(autoincrement())
+  handover_id     Int
+  recipient_email String                                 @db.VarChar(255)
+  recipient_type  email_tracking_handover_recipient_type
+  status          email_tracking_handover_status
+  note_hash       String                                 @db.VarChar(100)
+  note_text       String?                                @db.Text
+  message_id      String?                                @db.VarChar(255)
+  sent_at         DateTime?                              @db.Timestamp(0)
+  is_success      Boolean?                               @default(false)
+  retry_count     Int?                                   @default(0)
+  last_retry_at   DateTime?                              @db.Timestamp(0)
+  created_at      DateTime?                              @default(now()) @db.Timestamp(0)
+  tr_handover     tr_handover                            @relation(fields: [handover_id], references: [id], onDelete: Cascade, map: "fk_tracking_handover")
+
+  @@index([handover_id, recipient_email, recipient_type, status, note_hash], map: "idx_email_tracking_lookup")
+  @@index([is_success, retry_count, last_retry_at], map: "idx_email_tracking_retry")
+}
+
+model email_tracking_proposedchanges {
+  id                  Int                                           @id @default(autoincrement())
+  proposed_changes_id Int
+  recipient_email     String                                        @db.VarChar(255)
+  recipient_type      email_tracking_proposedchanges_recipient_type
+  status              email_tracking_proposedchanges_status
+  note_hash           String                                        @db.VarChar(100)
+  note_text           String?                                       @db.Text
+  message_id          String?                                       @db.VarChar(255)
+  sent_at             DateTime?                                     @db.Timestamp(0)
+  is_success          Boolean?                                      @default(false)
+  retry_count         Int?                                          @default(0)
+  last_retry_at       DateTime?                                     @db.Timestamp(0)
+  created_at          DateTime?                                     @default(now()) @db.Timestamp(0)
+  tr_proposed_changes tr_proposed_changes                           @relation(fields: [proposed_changes_id], references: [id], onDelete: Cascade, map: "fk_tracking_proposed_changes")
+
+  @@index([proposed_changes_id, recipient_email, recipient_type, status, note_hash], map: "idx_email_tracking_lookup")
+  @@index([is_success, retry_count, last_retry_at], map: "idx_email_tracking_retry")
+}
+
+model email_tracking_authdoc {
+  id                   Int                                   @id @default(autoincrement())
+  authorization_doc_id Int
+  recipient_email      String                                @db.VarChar(255)
+  recipient_type       email_tracking_authdoc_recipient_type
+  status               email_tracking_authdoc_status
+  note_hash            String                                @db.VarChar(100)
+  note_text            String?                               @db.Text
+  message_id           String?                               @db.VarChar(255)
+  sent_at              DateTime?                             @db.Timestamp(0)
+  is_success           Boolean?                              @default(false)
+  retry_count          Int?                                  @default(0)
+  last_retry_at        DateTime?                             @db.Timestamp(0)
+  created_at           DateTime?                             @default(now()) @db.Timestamp(0)
+  tr_authorization_doc tr_authorization_doc                  @relation(fields: [authorization_doc_id], references: [id], onDelete: Cascade, map: "fk_tracking_authdoc")
+
+  @@index([authorization_doc_id, recipient_email, recipient_type, status, note_hash], map: "idx_email_tracking_lookup")
+  @@index([is_success, retry_count, last_retry_at], map: "idx_email_tracking_retry")
+}
+
+model mst_template_approval_proposedchanges {
+  id                        Int                                              @id @default(autoincrement())
+  template_name             String                                           @db.VarChar(255)
+  line_code                 String?                                          @db.VarChar(50)
+  need_engineering_approval Boolean?
+  need_production_approval  Boolean?
+  step_order                Int
+  actor_name                String                                           @db.VarChar(255)
+  model_type                mst_template_approval_proposedchanges_model_type
+  section_id                Int?
+  use_dynamic_section       Boolean?                                         @default(false)
+  use_line_section          Boolean?                                         @default(false)
+  is_active                 Boolean?                                         @default(true)
+  priority                  Int?                                             @default(0)
+  description               String?                                          @db.Text
+  created_by                String                                           @db.VarChar(100)
+  created_date              DateTime?                                        @default(now()) @db.Timestamp(0)
+  updated_by                String?                                          @db.VarChar(100)
+  updated_date              DateTime?                                        @default(now()) @db.Timestamp(0)
+  is_deleted                Boolean?                                         @default(false)
+  section_department        mst_section_department?                          @relation(fields: [section_id], references: [id])
+
+  @@index([is_active, is_deleted], map: "idx_active")
+  @@index([need_engineering_approval, need_production_approval], map: "idx_engineering_production")
+  @@index([line_code], map: "idx_line_code")
+  @@index([step_order], map: "idx_step_order")
+  @@index([section_id], map: "idx_section_id")
+}
+
+model mst_template_approval_authorization {
+  id                        Int                                              @id @default(autoincrement())
+  template_name             String                                           @db.VarChar(255)
+  line_code                 String?                                          @db.VarChar(50)
+  step_order                Int
+  actor_name                String                                           @db.VarChar(255)
+  model_type                mst_template_approval_authorization_model_type
+  section_id                Int?
+  use_dynamic_section       Boolean?                                         @default(false)
+  use_line_section          Boolean?                                         @default(false)
+  
+  // Field baru untuk insert step system
+  is_insert_step            Boolean?                                         @default(false)
+  insert_after_step         Int?                                             // Insert setelah step berapa (nullable untuk default flow)
+  applies_to_lines          Json?                                            // Array line codes yang menggunakan step ini ["GBL", "PHARMA"]
+  
+  // Field yang sudah ada
+  is_active                 Boolean?                                         @default(true)
+  priority                  Int?                                             @default(0)
+  description               String?                                          @db.Text
+  created_by                String                                           @db.VarChar(100)
+  created_date              DateTime?                                        @default(now()) @db.Timestamp(0)
+  updated_by                String?                                          @db.VarChar(100)
+  updated_date              DateTime?                                        @default(now()) @db.Timestamp(0)
+  is_deleted                Boolean?                                         @default(false)
+  
+  // Relations
+  section_department        mst_section_department?                          @relation(fields: [section_id], references: [id])
+
+  // Indexes yang diperbaiki
+  @@index([is_active, is_deleted], map: "idx_auth_active")
+  @@index([line_code], map: "idx_auth_line_code")
+  @@index([step_order], map: "idx_auth_step_order")
+  @@index([section_id], map: "idx_auth_section_id")
+  @@index([is_insert_step, insert_after_step], map: "idx_insert_step")
+  @@index([template_name, line_code], map: "idx_template_line")
+}
+
+model mst_template_approval_handover {
+  id                        Int                                              @id @default(autoincrement())
+  template_name             String                                           @db.VarChar(255)
+  line_code                 String?                                          @db.VarChar(50)
+  step_order                Int
+  actor_name                String                                           @db.VarChar(255)
+  model_type                mst_template_approval_handover_model_type
+  section_id                Int?
+  use_dynamic_section       Boolean?                                         @default(false)
+  use_line_section          Boolean?                                         @default(false)
+  
+  // Field untuk insert step system (sama seperti authorization)
+  is_insert_step            Boolean?                                         @default(false)
+  insert_after_step         Int?                                             // Insert setelah step berapa (nullable untuk default flow)
+  applies_to_lines          Json?                                            // Array line codes yang menggunakan step ini ["GBL", "PHARMA"]
+  
+  // Field yang sudah ada
+  is_active                 Boolean?                                         @default(true)
+  priority                  Int?                                             @default(0)
+  description               String?                                          @db.Text
+  created_by                String                                           @db.VarChar(100)
+  created_date              DateTime?                                        @default(now()) @db.Timestamp(0)
+  updated_by                String?                                          @db.VarChar(100)
+  updated_date              DateTime?                                        @default(now()) @db.Timestamp(0)
+  is_deleted                Boolean?                                         @default(false)
+  
+  // Relations
+  section_department        mst_section_department?                          @relation(fields: [section_id], references: [id])
+
+  // Indexes
+  @@index([is_active, is_deleted], map: "idx_handover_active")
+  @@index([line_code], map: "idx_handover_line_code")
+  @@index([step_order], map: "idx_handover_step_order")
+  @@index([section_id], map: "idx_handover_section_id")
+  @@index([is_insert_step, insert_after_step], map: "idx_handover_insert_step")
+  @@index([template_name, line_code], map: "idx_handover_template_line")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tr_admin_bypass_log {
+  id                          Int                           @id @default(autoincrement())
+  proposed_changes_id         Int
+  admin_auth_id               Int
+  bypass_type                 String                        @default("approval_system") @db.VarChar(50)
+  target_status               String                        @db.VarChar(50)
+  original_status             String?                       @db.VarChar(50)
+  original_progress           String?                       @db.VarChar(10)
+  new_progress                String?                       @db.VarChar(10)
+  reason                      String                        @db.Text
+  affected_approvers_count    Int                           @default(0)
+  affected_approvers_list     Json?
+  bypass_timestamp            DateTime                      @default(now()) @db.DateTime(0)
+  ip_address                  String?                       @db.VarChar(45)
+  user_agent                  String?                       @db.Text
+  created_date                DateTime                      @default(now()) @db.DateTime(0)
+  is_deleted                  Boolean                       @default(false)
+  mst_authorization           mst_authorization             @relation(fields: [admin_auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_abl_admin")
+  tr_proposed_changes         tr_proposed_changes           @relation(fields: [proposed_changes_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_abl_proposed_changes")
+  tr_proposed_changes_history tr_proposed_changes_history[]
+
+  @@index([admin_auth_id], map: "idx_admin_auth_id")
+  @@index([bypass_timestamp], map: "idx_bypass_timestamp")
+  @@index([bypass_type], map: "idx_bypass_type")
+  @@index([created_date], map: "idx_created_date")
+  @@index([proposed_changes_id], map: "idx_proposed_changes_id")
+  @@index([target_status], map: "idx_target_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tr_approver_change_history {
+  id                                                                            Int                                    @id @default(autoincrement())
+  approval_id                                                                   Int
+  proposed_changes_id                                                           Int
+  change_request_id                                                             Int?
+  action_type                                                                   tr_approver_change_history_action_type
+  from_auth_id                                                                  Int?
+  to_auth_id                                                                    Int?
+  version_from                                                                  Int?
+  version_to                                                                    Int?
+  reason                                                                        String?                                @db.Text
+  actor_auth_id                                                                 Int?
+  actor_name                                                                    String?                                @db.VarChar(255)
+  actor_role                                                                    String?                                @db.VarChar(50)
+  metadata                                                                      Json?
+  created_date                                                                  DateTime                               @default(now()) @db.DateTime(0)
+  ip_address                                                                    String?                                @db.VarChar(45)
+  mst_authorization_tr_approver_change_history_actor_auth_idTomst_authorization mst_authorization?                     @relation("tr_approver_change_history_actor_auth_idTomst_authorization", fields: [actor_auth_id], references: [id], onUpdate: NoAction, map: "fk_ach_actor")
+  tr_proposed_changes_approval                                                  tr_proposed_changes_approval           @relation(fields: [approval_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ach_approval")
+  tr_approver_change_request                                                    tr_approver_change_request?            @relation(fields: [change_request_id], references: [id], onUpdate: NoAction, map: "fk_ach_change_request")
+  mst_authorization_tr_approver_change_history_from_auth_idTomst_authorization  mst_authorization?                     @relation("tr_approver_change_history_from_auth_idTomst_authorization", fields: [from_auth_id], references: [id], onUpdate: NoAction, map: "fk_ach_from_approver")
+  tr_proposed_changes                                                           tr_proposed_changes                    @relation(fields: [proposed_changes_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ach_proposed_changes")
+  mst_authorization_tr_approver_change_history_to_auth_idTomst_authorization    mst_authorization?                     @relation("tr_approver_change_history_to_auth_idTomst_authorization", fields: [to_auth_id], references: [id], onUpdate: NoAction, map: "fk_ach_to_approver")
+
+  @@index([from_auth_id], map: "fk_ach_from_approver")
+  @@index([to_auth_id], map: "fk_ach_to_approver")
+  @@index([action_type], map: "idx_action_type")
+  @@index([actor_auth_id], map: "idx_actor_auth_id")
+  @@index([approval_id], map: "idx_approval_id")
+  @@index([change_request_id], map: "idx_change_request_id")
+  @@index([created_date], map: "idx_created_date")
+  @@index([proposed_changes_id], map: "idx_proposed_changes_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tr_approver_change_request {
+  id                                                                                                            Int                                 @id @default(autoincrement())
+  proposed_changes_id                                                                                           Int
+  approval_id                                                                                                   Int
+  current_auth_id                                                                                               Int
+  new_auth_id                                                                                                   Int
+  reason                                                                                                        String                              @db.Text
+  urgent                                                                                                        Boolean                             @default(false)
+  requested_by                                                                                                  String                              @db.VarChar(100)
+  requester_auth_id                                                                                             Int?
+  status                                                                                                        tr_approver_change_request_status   @default(pending)
+  admin_decision                                                                                                String?                             @db.Text
+  processed_by                                                                                                  String?                             @db.VarChar(100)
+  processed_by_auth_id                                                                                          Int?
+  processed_date                                                                                                DateTime?                           @db.DateTime(0)
+  version_before                                                                                                Int                                 @default(1)
+  version_after                                                                                                 Int?
+  request_type                                                                                                  String                              @default("approver_change") @db.VarChar(50)
+  priority                                                                                                      tr_approver_change_request_priority @default(normal)
+  created_date                                                                                                  DateTime                            @default(now()) @db.DateTime(0)
+  updated_date                                                                                                  DateTime?                           @db.DateTime(0)
+  is_deleted                                                                                                    Boolean                             @default(false)
+  tr_approver_change_history                                                                                    tr_approver_change_history[]
+  tr_proposed_changes_approval_tr_approver_change_request_approval_idTotr_proposed_changes_approval             tr_proposed_changes_approval        @relation("tr_approver_change_request_approval_idTotr_proposed_changes_approval", fields: [approval_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_approval")
+  mst_authorization_tr_approver_change_request_current_auth_idTomst_authorization                               mst_authorization                   @relation("tr_approver_change_request_current_auth_idTomst_authorization", fields: [current_auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_current_approver")
+  mst_authorization_tr_approver_change_request_new_auth_idTomst_authorization                                   mst_authorization                   @relation("tr_approver_change_request_new_auth_idTomst_authorization", fields: [new_auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_new_approver")
+  mst_authorization_tr_approver_change_request_processed_by_auth_idTomst_authorization                          mst_authorization?                  @relation("tr_approver_change_request_processed_by_auth_idTomst_authorization", fields: [processed_by_auth_id], references: [id], onUpdate: NoAction, map: "fk_acr_processor")
+  tr_proposed_changes                                                                                           tr_proposed_changes                 @relation(fields: [proposed_changes_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_acr_proposed_changes")
+  mst_authorization_tr_approver_change_request_requester_auth_idTomst_authorization                             mst_authorization?                  @relation("tr_approver_change_request_requester_auth_idTomst_authorization", fields: [requester_auth_id], references: [id], onUpdate: NoAction, map: "fk_acr_requester")
+  tr_proposed_changes_approval_tr_proposed_changes_approval_changed_from_request_idTotr_approver_change_request tr_proposed_changes_approval[]      @relation("tr_proposed_changes_approval_changed_from_request_idTotr_approver_change_request")
+  tr_proposed_changes_history                                                                                   tr_proposed_changes_history[]
+
+  @@index([processed_by_auth_id], map: "fk_acr_processor")
+  @@index([requester_auth_id], map: "fk_acr_requester")
+  @@index([approval_id], map: "idx_approval_id")
+  @@index([created_date], map: "idx_created_date")
+  @@index([current_auth_id], map: "idx_current_auth_id")
+  @@index([new_auth_id], map: "idx_new_auth_id")
+  @@index([priority], map: "idx_priority")
+  @@index([processed_date], map: "idx_processed_date")
+  @@index([proposed_changes_id], map: "idx_proposed_changes_id")
+  @@index([status], map: "idx_status")
+  @@index([urgent], map: "idx_urgent")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tr_notification_log {
+  id                Int      @id @default(autoincrement())
+  notification_type String   @db.VarChar(100)
+  recipients        Json
+  sent_count        Int      @default(0)
+  failed_count      Int      @default(0)
+  urgent            Boolean  @default(false)
+  related_id        Int?
+  details           Json?
+  created_date      DateTime @default(now()) @db.DateTime(0)
+
+  @@index([created_date], map: "idx_created_date")
+  @@index([notification_type], map: "idx_notification_type")
+  @@index([urgent], map: "idx_urgent")
+}
+
+// ==========================================
+// ENUMS FOR ALL FEATURES
+// ==========================================
+
+enum Gender {
+  M
+  F
+}
+
+enum email_tracking_proposedchanges_recipient_type {
+  submitter
+  approver
+  next_approver
+}
+
+enum email_tracking_proposedchanges_status {
+  approved
+  not_approved
+  rejected
+}
+
+enum email_tracking_authdoc_recipient_type {
+  submitter
+  approver
+  next_approver
+}
+
+enum email_tracking_handover_recipient_type {
+  submitter
+  approver
+  next_approver
+}
+
+enum email_tracking_authdoc_status {
+  approved
+  not_approved
+  rejected
+}
+
+enum email_tracking_handover_status {
+  approved
+  not_approved
+  rejected
+}
+
+enum mst_template_approval_proposedchanges_model_type {
+  section
+  department
+}
+
+enum mst_template_approval_authorization_model_type {
+  section
+  department
+}
+
+enum mst_template_approval_handover_model_type {
+  section
+  department
+}
+
+enum tr_approver_change_history_action_type {
+  initial
+  change_requested
+  change_approved
+  change_rejected
+  manual_change
+}
+
+enum tr_approver_change_request_status {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum tr_proposed_changes_history_action_type {
+  approval
+  change_approver
+  admin_bypass
+  system
+}
+
+enum tr_approver_change_request_priority {
+  low
+  normal
+  high
+  urgent
+}
+
+// NEW ENUMS FOR AUTHORIZATION DOCUMENT FEATURES
+enum tr_approver_change_request_authdoc_status {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum tr_approver_change_request_authdoc_priority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum tr_approver_change_history_authdoc_action_type {
+  initial
+  change_requested
+  change_approved
+  change_rejected
+  manual_change
+}
+
+enum tr_authdoc_history_action_type {
+  approval
+  change_approver
+  admin_bypass
+  system
+}

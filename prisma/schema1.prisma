@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../prisma/generated/db1"
+    binaryTargets = ["native", "windows"]
+
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL_1")
+}
+
+model mst_user {
+  user_id       Int       @id @default(autoincrement())
+  employee_code String    @unique @db.VarChar(50) //  unique
+  employee_name String    @db.VarChar(100)
+  username      String    @db.VarChar(50) // Tidak unique
+  email         String    @db.VarChar(100) // Tidak unique
+  password      String    @db.VarChar(255)
+  phone_number  String?   @db.VarChar(20) // Tidak unique, dan tetap optional
+  status        Boolean   @default(true)
+  created_at    DateTime? @default(now()) @db.Timestamp(0)
+  updated_at    DateTime? @default(now()) @db.Timestamp(0)
+  is_deleted    Boolean   @default(false)
+
+  @@map("mst_user")
+}
+
+model mst_employment {
+  id            Int     @id @default(autoincrement()) // Add this line
+  employee_code String  @db.VarChar(50) // Changed to @unique
+  employee_name String  @db.VarChar(100)
+  mail_id       String? @db.VarChar(100)
+  phone_number  String? @db.VarChar(20)
+}
